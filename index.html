@@ -1,66 +1,235 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja-JP">
   <head>
     <meta charset="utf-8" />
-    <title>My first Vue app</title>
-    <script src="https://unpkg.com/vue"></script>
+    <title>活動連絡テキスト作成ツール</title>
+    <meta
+      name="description"
+      content="参加メンバーと会計係へ活動の連絡をするためのテキストを作成します"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/css/materialdesignicons.min.css"
+    />
     <style type="text/css">
-      body,
-      input,
-      button {
-        font-size: 20px;
+      .field:not(:last-child) {
+        margin-bottom: 1.25rem;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
       }
     </style>
   </head>
   <body>
     <div id="app">
-      <div v-if="!isOutputShowing">
-        <button>普通の活動</button>
-        <button>球出し練習</button>
-      </div>
-
-      <div v-if="isOutputShowing">
-        <button @click="backToEdit">
-          戻る
-        </button>
-        <button @click="copy">もう一度コピーする</button>
+      <div v-if="isOutputShowing" class="box">
+        <div
+          class="notification is-success"
+          style="
+            animation: fadeIn 0.7s cubic-bezier(0.33, 1, 0.68, 1) 1 forwards;
+          "
+        >
+          テキストをコピーしました。<br />
+          ブラウザを閉じ、LINEに投稿してください。<br />
+          参加メンバーへのメンションも忘れずにお願いします。
+        </div>
         <pre ref="textForCopyRef">{{ textForCopy }}</pre>
+        <button @click="backToEdit" class="mt-4 button is-fullwidth">
+          やり直す
+        </button>
       </div>
 
       <div v-else>
-        <form @submit.prevent="outputAndCopy">
-          <div>日時*</div>
-          <input required type="datetime-local" v-model="datetime" />
-          <button>今日</button>
-          <button>明日</button>
-          <div>場所*</div>
-          <input required v-model="place" />
-          <div>コート利用料*</div>
-          <input required type="number" v-model="placeFee" />
-          <div>参加者数*</div>
-          <div>ゲストを含めた数を書いてください</div>
-          <input required type="number" v-model="people" />
+        <div class="m-4 notification">
+          参加メンバーと会計係へ活動の連絡をするためのテキストを作成します。<br />
+          下記項目を入力し、決定ボタンを押してください。
+        </div>
 
-          <div>コートの受付と参加費の預かりをする人*</div>
-          <div>もし違う人が参加費を預かった場合は報告してください</div>
-          <input required v-model="okanePerson" />
-          <div>予約者名(ひらがなフルネーム)</div>
-          <div>もしあなたがコートの受付をする場合は書かなくてよいです</div>
-          <input v-model="yoyakuPerson" />
-          <button type="submit">テキストを出力してコピーする</button>
+        <form class="box" @submit.prevent="outputAndCopy">
+          <div class="field">
+            <div class="mb-0 tabs is-toggle is-fullwidth">
+              <ul>
+                <li :class="{ 'is-active': !isTamadashiMode }">
+                  <a @click="isTamadashiMode = false">
+                    <i
+                      class="pr-1 mdi mdi-18px"
+                      :class="!isTamadashiMode ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                    ></i>
+                    通常の活動
+                  </a>
+                </li>
+                <li :class="{ 'is-active': isTamadashiMode }">
+                  <a @click="isTamadashiMode = true">
+                    <i
+                      class="pr-1 mdi mdi-18px"
+                      :class="isTamadashiMode ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
+                    ></i>
+                    球出し練習
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <p class="help">
+              どちらかを選択してください。<br />
+              球出し練習を選択した場合、参加費の計算方法が変わります。
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label">
+              日時
+              <span class="tag has-text-weight-normal">必須</span>
+            </label>
+            <div
+              class="control"
+              :class="{ 'has-icons-right': shouldShowCalendarIcon }"
+            >
+              <input
+                required
+                class="input is-medium"
+                type="datetime-local"
+                v-model="datetime"
+              />
+              <span v-if="shouldShowCalendarIcon" class="icon is-right">
+                <i class="mdi mdi-24px mdi-dark mdi-calendar-clock"></i>
+              </span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">
+              場所
+              <span class="tag has-text-weight-normal">必須</span>
+            </label>
+            <div class="control">
+              <input
+                required
+                class="input is-medium"
+                v-model="place"
+                placeholder="◯◯公園"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">
+              コート利用料
+              <span class="tag has-text-weight-normal">必須</span>
+            </label>
+            <div class="control has-icons-left">
+              <input
+                required
+                type="number"
+                class="input is-medium"
+                v-model="placeFee"
+              />
+              <span class="icon is-left">
+                <i class="mdi mdi-dark mdi-currency-jpy"></i>
+              </span>
+            </div>
+            <p class="help">
+              照明代等を含めた、コート管理者に支払われる金額を入力してください。
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label">
+              参加人数<span v-if="isTamadashiMode">（球出し担当者を除く）</span>
+              <span class="tag has-text-weight-normal">必須</span>
+            </label>
+            <div class="control">
+              <input
+                required
+                type="number"
+                class="input is-medium"
+                v-model="people"
+              />
+            </div>
+            <p class="help">
+              <span v-if="isTamadashiMode">
+                ゲストを含めた、 "球出し担当者を除く"
+                参加者の人数を入力してください。
+              </span>
+              <span v-else>
+                ゲストを含めた、コートを使う全員の人数を入力してください。
+              </span>
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label">
+              コート受付・参加費預かり担当者
+              <span class="tag has-text-weight-normal">必須</span>
+            </label>
+            <div class="control">
+              <input
+                required
+                class="input is-medium"
+                v-model="okanePerson"
+                placeholder="マムシ"
+              />
+            </div>
+            <p class="help">
+              担当者は受付でコート代を支払い、参加者から参加費を預かります。<br />
+              会計係はこの人から備品積立金を回収します。
+            </p>
+          </div>
+
+          <div class="field">
+            <label class="label">コート予約者名</label>
+            <div class="control">
+              <input
+                class="input is-medium"
+                v-model="yoyakuPerson"
+                placeholder="かいどうかおる"
+              />
+            </div>
+            <p class="help">
+              受付をする人のために、ひらがなフルネームで入力してください。<br />
+              あなたがコートの受付をする場合は省略して構いません。
+            </p>
+          </div>
+
+          <div class="pt-4"></div>
+
+          <button type="submit" class="button is-link is-large is-fullwidth">
+            決定
+          </button>
         </form>
       </div>
+
+      <div class="pt-6"></div>
     </div>
 
+    <script src="https://unpkg.com/vue"></script>
     <script>
-      var app = new Vue({
+      const app = new Vue({
         el: "#app",
         data() {
+          const parts = new Intl.DateTimeFormat("ja-JP", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+          }).formatToParts(new Date());
+
+          const year = parts.find((p) => p.type === "year").value;
+          const month = parts.find((p) => p.type === "month").value;
+          const day = parts.find((p) => p.type === "day").value;
+
           return {
             isTamadashiMode: false,
             isOutputShowing: false,
-            datetime: "2021-04-25T19:00",
+            datetime: `${year}-${month}-${day}T19:00:00`,
             place: "光が丘公園",
             placeFee: 3600,
             people: 6,
@@ -69,18 +238,49 @@
           };
         },
         computed: {
-          textForCopy() {
+          shouldShowCalendarIcon() {
+            const ua = window.navigator.userAgent.toLowerCase();
             return (
-              `【活動のお知らせ】\n` +
-              `日時: ${this.datetime}から\n` +
+              !ua.includes("chrome") &&
+              !ua.includes("edge") &&
+              ua.includes("safari")
+            );
+          },
+          feePerPerson() {
+            return this.isTamadashiMode
+              ? 1000
+              : Math.ceil(this.placeFee / this.people / 100) * 100 + 100;
+          },
+          textForCopy() {
+            const formattedDatetime = new Intl.DateTimeFormat("ja-JP", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            }).format(new Date(this.datetime));
+
+            const l = (number) => number.toLocaleString();
+
+            return (
+              "■活動の連絡\n" +
+              "[作成ツール https://sossii.github.io/tn]\n" +
+              "\n" +
+              `日時: ${formattedDatetime}${
+                this.isTamadashiMode ? "（球出し練習）" : ""
+              }\n` +
               `場所: ${this.place}\n` +
-              `コート利用料: ${this.placeFee}\n` +
-              `参加者数: ${this.people}\n` +
-              `参加費(一人分): ${this.placeFee / this.people}\n` +
-              `参加費(全員分): ${this.placeFee / this.people}\n` +
-              `コートの受付と参加費の預かりをする人: ${this.okanePerson}\n` +
-              `予約者名（ひらがなフルネーム）: ${this.yoyakuPerson}\n` +
-              `参加メンバーにメンション: `
+              `コート利用料: ¥${l(this.placeFee)}\n` +
+              `参加人数: ${l(this.people)}人${
+                this.isTamadashiMode ? "（球出し担当者を除く）" : ""
+              }\n` +
+              `参加費（一人分）: ¥${l(this.feePerPerson)}\n` +
+              `参加費（全員分）: ¥${l(this.feePerPerson * this.people)}\n` +
+              `コート受付・参加費預かり担当者: ${this.okanePerson}\n` +
+              (this.yoyakuPerson === ""
+                ? ""
+                : `コート予約者名: ${this.yoyakuPerson}\n`) +
+              "参加メンバーへメンション: "
             );
           }
         },
